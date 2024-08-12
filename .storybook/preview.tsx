@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 import { IntlProvider } from 'react-intl';
 import { initialize, mswDecorator } from 'msw-storybook-addon';
 
@@ -7,25 +7,25 @@ import features from '../examples/src/features';
 import '../src/styles/variables';
 import '../src/styles/base.scss';
 
-import { reactIntl } from "./reactIntl";
+import { reactIntl } from './reactIntl';
 
 // Constants
 global.FEATURE_FLAGS = global.FEATURE_FLAGS || features;
-global.FILE_ID = global.FILE_ID || '415542803939';
-global.FOLDER_ID = global.FOLDER_ID || '69083462919';
+global.FILE_ID = global.FILE_ID || '1048620269827';
+global.FOLDER_ID = global.FOLDER_ID || '274172109253';
 // NOTE: The token used is a readonly token accessing public data in a demo enterprise. DO NOT PUT A WRITE TOKEN
-global.TOKEN = global.TOKEN || 'P1n3ID8nYMxHRWvenDatQ9k6JKzWzYrz';
+global.TOKEN = global.TOKEN || 'igbnzSfpZ6pHCmtoLKrGBmvg9wKuHW79';
 
 initialize();
 
 const preview = {
-    decorators:[
+    decorators: [
         mswDecorator,
-        (Story) => (
+        Story => (
             <IntlProvider locale="en">
                 <Story />
             </IntlProvider>
-        )
+        ),
     ],
 
     parameters: {
@@ -52,7 +52,7 @@ const preview = {
             en: 'English',
             de: 'Deutsche',
         },
-    }
+    },
 };
 
 export default preview;

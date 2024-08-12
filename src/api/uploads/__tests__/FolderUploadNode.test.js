@@ -136,14 +136,16 @@ describe('api/uploads/FolderUploadNode', () => {
 
             expect(errorCallback).not.toHaveBeenCalledWith(error);
             expect(errorCallback).not.toHaveBeenCalledWith({ code: ERROR_CODE_UPLOAD_CHILD_FOLDER_FAILED });
-            expect(folderUploadNodeInstance.addFolderToUploadQueue).toHaveBeenCalledWith({
-                extension: '',
-                name,
-                status: STATUS_COMPLETE,
-                isFolder: true,
-                size: 1,
-                progress: 100,
-            });
+            expect(folderUploadNodeInstance.addFolderToUploadQueue).toHaveBeenCalledWith([
+                {
+                    extension: '',
+                    name,
+                    status: STATUS_COMPLETE,
+                    isFolder: true,
+                    size: 1,
+                    progress: 100,
+                },
+            ]);
         });
 
         test('should call addFolderToUploadQueue when folder is created successfully for non-root folder', async () => {
@@ -158,14 +160,16 @@ describe('api/uploads/FolderUploadNode', () => {
 
             await folderUploadNodeInstance.createAndUploadFolder(errorCallback, isRoot);
 
-            expect(folderUploadNodeInstance.addFolderToUploadQueue).toHaveBeenCalledWith({
-                extension: '',
-                name,
-                status: STATUS_COMPLETE,
-                isFolder: true,
-                size: 1,
-                progress: 100,
-            });
+            expect(folderUploadNodeInstance.addFolderToUploadQueue).toHaveBeenCalledWith([
+                {
+                    extension: '',
+                    name,
+                    status: STATUS_COMPLETE,
+                    isFolder: true,
+                    size: 1,
+                    progress: 100,
+                },
+            ]);
         });
 
         test('should not addFolderToUploadQueue() when folder is created successfully for root folder', async () => {

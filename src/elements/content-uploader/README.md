@@ -2,6 +2,7 @@
 ```jsx
 <IntlProvider locale="en">
     <ContentUploader
+        isFolderUploadEnabled
         features={FEATURES}
         rootFolderId={FOLDER_ID}
         token={TOKEN}

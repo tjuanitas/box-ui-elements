@@ -172,6 +172,7 @@ class ContentUploader extends Component<Props, State> {
      * @return {ContentUploader}
      */
     constructor(props: Props) {
+        console.log('content uploader react 18');
         super(props);
 
         const { rootFolderId, token, useUploadsManager } = props;
@@ -219,6 +220,7 @@ class ContentUploader extends Component<Props, State> {
      * @return {void}
      */
     componentDidUpdate(): void {
+        console.log('---- componentDidUpdate ----');
         const { files, dataTransferItems, useUploadsManager } = this.props;
 
         const hasFiles = Array.isArray(files) && files.length > 0;
@@ -323,12 +325,18 @@ class ContentUploader extends Component<Props, State> {
         itemUpdateCallback: Function,
         isRelativePathIgnored?: boolean = false,
     ) => {
+        console.log('---- addFilesToUploadQueue ----');
         const { onBeforeUpload, rootFolderId, isPrepopulateFilesEnabled } = this.props;
         if (!files || files.length === 0) {
             return;
         }
 
         const newFiles = this.getNewFiles(files);
+
+        console.log(
+            'new files to upload',
+            newFiles.map(newFile => newFile.name),
+        );
 
         if (newFiles.length === 0) {
             return;
@@ -372,9 +380,10 @@ class ContentUploader extends Component<Props, State> {
      * @private
      * @param {DataTransfer} droppedItems
      * @param {Function} itemUpdateCallback
-     * @returns {Promise<any>}
+     * @returns {void}
      */
     addDroppedItemsToUploadQueue = (droppedItems: DataTransfer, itemUpdateCallback: Function): void => {
+        console.log('---- addDroppedItemsToUploadQueue ----');
         if (droppedItems.items) {
             this.addDataTransferItemsToUploadQueue(droppedItems.items, itemUpdateCallback);
         } else {
@@ -388,12 +397,13 @@ class ContentUploader extends Component<Props, State> {
      * @private
      * @param {DataTransferItemList} dataTransferItems
      * @param {Function} itemUpdateCallback
-     * @returns {Promise<any>}
+     * @returns {void}
      */
     addDataTransferItemsToUploadQueue = (
         dataTransferItems: DataTransferItemList | Array<DataTransferItem | UploadDataTransferItemWithAPIOptions>,
         itemUpdateCallback: Function,
     ): void => {
+        console.log('---- addDataTransferItemsToUploadQueue ----');
         const { isFolderUploadEnabled } = this.props;
         if (!dataTransferItems || dataTransferItems.length === 0) {
             return;
@@ -430,14 +440,12 @@ class ContentUploader extends Component<Props, State> {
         dataTransferItems: Array<DataTransferItem | UploadDataTransferItemWithAPIOptions>,
         itemUpdateCallback: Function,
     ): Promise<any> => {
+        console.log('---- addFileDataTransferItemsToUploadQueue ----');
         const files = await Promise.all(dataTransferItems.map(async item => getFileFromDataTransferItem(item)));
-        const filesArray = [];
-        files.forEach(file => {
-            if (file) {
-                filesArray.push(file);
-            }
-        });
-        this.addFilesToUploadQueue(filesArray, itemUpdateCallback);
+        this.addFilesToUploadQueue(
+            files.filter(file => file),
+            itemUpdateCallback,
+        );
     };
 
     /**
@@ -446,22 +454,18 @@ class ContentUploader extends Component<Props, State> {
      * @private
      * @param {Array<DataTransferItem | UploadDataTransferItemWithAPIOptions>} dataTransferItems
      * @param {Function} itemUpdateCallback
-     * @returns {Promise<any>}
+     * @returns {void}
      */
-    addPackageDataTransferItemsToUploadQueue = async (
+    addPackageDataTransferItemsToUploadQueue = (
         dataTransferItems: Array<DataTransferItem | UploadDataTransferItemWithAPIOptions>,
         itemUpdateCallback: Function,
-    ): Promise<any> => {
-        const packageFiles = await Promise.all(
-            dataTransferItems.map(async item => getPackageFileFromDataTransferItem(item)),
+    ): void => {
+        console.log('---- addPackageDataTransferItemsToUploadQueue ----');
+        const packageFiles = dataTransferItems.map(item => getPackageFileFromDataTransferItem(item));
+        this.addFilesToUploadQueue(
+            packageFiles.filter(packageFile => packageFile),
+            itemUpdateCallback,
         );
-        const packageFilesArray = [];
-        packageFiles.forEach(packageFile => {
-            if (packageFile) {
-                packageFilesArray.push(packageFile);
-            }
-        });
-        this.addFilesToUploadQueue(packageFilesArray, itemUpdateCallback);
     };
 
     /**
@@ -476,6 +480,7 @@ class ContentUploader extends Component<Props, State> {
         dataTransferItems: Array<DataTransferItem | UploadDataTransferItemWithAPIOptions>,
         itemUpdateCallback: Function,
     ): Promise<any> => {
+        console.log('---- addFolderDataTransferItemsToUploadQueue ----');
         const { rootFolderId } = this.props;
         const { itemIds } = this.state;
         if (dataTransferItems.length === 0) {
@@ -491,19 +496,14 @@ class ContentUploader extends Component<Props, State> {
             return;
         }
 
+        // should this be revert to pre-react 18 implementation?
+        // reason: to utilize addFolderToUploadQueue
         const fileAPIOptions: Object = getDataTransferItemAPIOptions(newItems[0]);
         const { folderId = rootFolderId } = fileAPIOptions;
-        const folderUploads = await Promise.all(
-            newItems.map(async item => {
-                const folderUpload = this.getFolderUploadAPI(folderId);
-                await folderUpload.buildFolderTreeFromDataTransferItem(item);
-                return folderUpload;
-            }),
-        );
-        const folderUploadsArray = [];
-        folderUploads.forEach(folderUpload => {
-            // $FlowFixMe no file property
-            folderUploadsArray.push({
+        const folderUploads = newItems.map(item => {
+            const folderUpload = this.getFolderUploadAPI(folderId);
+            folderUpload.buildFolderTreeFromDataTransferItem(item);
+            return {
                 api: folderUpload,
                 extension: '',
                 isFolder: true,
@@ -512,9 +512,10 @@ class ContentUploader extends Component<Props, State> {
                 progress: 0,
                 size: 1,
                 status: STATUS_PENDING,
-            });
+            };
         });
-        this.addToQueue(folderUploadsArray, itemUpdateCallback);
+
+        this.addToQueue(folderUploads, itemUpdateCallback);
     };
 
     /**
@@ -526,6 +527,7 @@ class ContentUploader extends Component<Props, State> {
      * @return {void}
      */
     addFilesWithRelativePathToQueue(files: Array<UploadFileWithAPIOptions | File>, itemUpdateCallback: Function) {
+        console.log('---- addFilesWithRelativePathToQueue ----');
         if (files.length === 0) {
             return;
         }
@@ -564,6 +566,7 @@ class ContentUploader extends Component<Props, State> {
      * @return {void}
      */
     addFolderToUploadQueue = (folderUpload: FolderUpload, itemUpdateCallback: Function, apiOptions: Object): void => {
+        console.log('---- addFolderToUploadQueue ----');
         this.addToQueue(
             [
                 // $FlowFixMe no file property
@@ -594,8 +597,11 @@ class ContentUploader extends Component<Props, State> {
         files: Array<UploadFileWithAPIOptions | File>,
         itemUpdateCallback: Function,
     ) => {
+        console.log('---- addFilesWithoutRelativePathToQueue ----');
         const { itemIds } = this.state;
         const { rootFolderId } = this.props;
+
+        console.log('### DISCREPANCY: item ids', JSON.stringify(itemIds));
 
         // Convert files from the file API to upload items
         const newItems = files.map(file => {
@@ -610,7 +616,7 @@ class ContentUploader extends Component<Props, State> {
             }
 
             const api = this.getUploadAPI(uploadFile, uploadAPIOptions);
-            const uploadItem: Object = {
+            const uploadItem: UploadItem = {
                 api,
                 extension,
                 file: uploadFile,
@@ -643,18 +649,32 @@ class ContentUploader extends Component<Props, State> {
      * Add new items to the upload queue
      *
      * @private
-     * @param {Array<UploadFileWithAPIOptions | File>} newItems - Files to be added to upload queue
+     * @param {Array<UploadItem> | FolderUploadItem} newItems - Files to be added to upload queue
      * @param {Function} itemUpdateCallback - function to be invoked after items status are updated
      * @return {void}
      */
     addToQueue = (newItems: UploadItem[], itemUpdateCallback: Function) => {
+        console.log('---- addToQueue ----');
         const { fileLimit, useUploadsManager } = this.props;
         const { items, isUploadsManagerExpanded } = this.state;
 
+        try {
+            console.log('queued newItems', JSON.stringify(newItems.map(newItem => newItem.name)));
+        } catch (error) {
+            console.log('queued newItems', newItems.name);
+        }
+
+        console.log('what is the current state?', JSON.stringify(items));
+
         let updatedItems = [];
         const prevItemsNum = items.length;
+        // WARNING: `newItems` is passed as an object instead of an array from FolderUploadNode
+        // This unintentionally achieves the desired behavior
         const totalNumOfItems = prevItemsNum + newItems.length;
 
+        console.log('wtf is going on', totalNumOfItems, prevItemsNum);
+
+        // FILE LIMIT DOESN'T WORK??
         // Don't add more than fileLimit # of items
         if (totalNumOfItems > fileLimit) {
             updatedItems = items.concat(newItems.slice(0, fileLimit - items.length));
@@ -677,6 +697,7 @@ class ContentUploader extends Component<Props, State> {
             }
         }
 
+        console.log('updateViewAndCollection: from addToQueue');
         this.updateViewAndCollection(updatedItems, () => {
             if (itemUpdateCallback) {
                 itemUpdateCallback();
@@ -748,6 +769,7 @@ class ContentUploader extends Component<Props, State> {
         items.splice(items.indexOf(item), 1);
 
         onCancel([item]);
+        console.log('updateViewAndCollection: from removeFileFromUploadQueue');
         this.updateViewAndCollection(items, () => {
             // Minimize uploads manager if there are no more items
             if (useUploadsManager && !items.length) {
@@ -777,6 +799,7 @@ class ContentUploader extends Component<Props, State> {
         });
 
         // Reset upload collection
+        console.log('updateViewAndCollection: from cancel');
         this.updateViewAndCollection([]);
     };
 
@@ -787,6 +810,7 @@ class ContentUploader extends Component<Props, State> {
      * @return {void}
      */
     upload = () => {
+        console.log('---- upload ----');
         const { items } = this.state;
         items.forEach(uploadItem => {
             if (uploadItem.status === STATUS_PENDING) {
@@ -802,10 +826,12 @@ class ContentUploader extends Component<Props, State> {
      * @return {void}
      */
     uploadFile(item: UploadItem) {
+        console.log('---- uploadFile ----', item.name);
         const { overwrite, rootFolderId } = this.props;
         const { api, file, options } = item;
         const { items } = this.state;
 
+        console.log('current upload state', JSON.stringify(items.map(temp => temp.name)));
         const numItemsUploading = items.filter(item_t => item_t.status === STATUS_IN_PROGRESS).length;
 
         if (numItemsUploading >= UPLOAD_CONCURRENCY) {
@@ -817,7 +843,10 @@ class ContentUploader extends Component<Props, State> {
             folderId: options && options.folderId ? options.folderId : rootFolderId,
             errorCallback: error => this.handleUploadError(item, error),
             progressCallback: event => this.handleUploadProgress(item, event),
-            successCallback: entries => this.handleUploadSuccess(item, entries),
+            successCallback: entries => {
+                console.log('is this bullshit?');
+                return this.handleUploadSuccess(item, entries);
+            },
             overwrite,
             fileId: options && options.fileId ? options.fileId : null,
         };
@@ -827,6 +856,7 @@ class ContentUploader extends Component<Props, State> {
 
         api.upload(uploadOptions);
 
+        console.log('updateViewAndCollection: from uploadFile');
         this.updateViewAndCollection(items);
     }
 
@@ -865,6 +895,7 @@ class ContentUploader extends Component<Props, State> {
         onResume(item);
         api.resume(resumeOptions);
 
+        console.log('updateViewAndCollection: from resumeFile');
         this.updateViewAndCollection(items);
     }
 
@@ -889,6 +920,7 @@ class ContentUploader extends Component<Props, State> {
         const { items } = this.state;
         items[items.indexOf(item)] = item;
 
+        console.log('updateViewAndCollection: from resetFile');
         this.updateViewAndCollection(items);
     }
 
@@ -925,6 +957,7 @@ class ContentUploader extends Component<Props, State> {
             onUpload(item.boxFile);
         }
 
+        console.log('updateViewAndCollection: from handleUploadSuccess');
         this.updateViewAndCollection(items, () => {
             const { view } = this.state;
             if (view === VIEW_UPLOAD_IN_PROGRESS) {
@@ -949,6 +982,7 @@ class ContentUploader extends Component<Props, State> {
      * @return {void}
      */
     updateViewAndCollection(items: UploadItem[], callback?: Function) {
+        console.log('WHERE ARE WE BEING CALLED?', JSON.stringify(items.map(item => item.name)));
         const { onComplete, useUploadsManager, isResumableUploadsEnabled, isPartialUploadEnabled }: Props = this.props;
         const someUploadIsInProgress = items.some(uploadItem => uploadItem.status !== STATUS_COMPLETE);
         const someUploadHasFailed = items.some(uploadItem => uploadItem.status === STATUS_ERROR);
@@ -999,6 +1033,8 @@ class ContentUploader extends Component<Props, State> {
             view,
         };
 
+        console.log('what is the length at this point?', items.length);
+
         if (items.length === 0) {
             state.itemIds = {};
             state.errorCode = '';
@@ -1042,6 +1078,7 @@ class ContentUploader extends Component<Props, State> {
 
         onError(errorData);
 
+        console.log('updateViewAndCollection: from handleUploadError');
         this.updateViewAndCollection(newItems, () => {
             if (useUploadsManager) {
                 this.isAutoExpanded = true;
@@ -1076,6 +1113,7 @@ class ContentUploader extends Component<Props, State> {
         const { items } = this.state;
         items[items.indexOf(item)] = item;
 
+        console.log('updateViewAndCollection: from handleUploadProgress');
         this.updateViewAndCollection(items);
     };
 
